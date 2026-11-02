@@ -109,3 +109,16 @@ Upstream optional TLS support does not configure certificate verification;
 do not treat it as authenticated HTTPS. The intended local MA stream uses the
 configured internal stream address. This update is not a claim to fix all
 upstream parser bugs or Music Assistant queue/recommendation behavior.
+
+## Supervisor installation follow-up (0.0.23)
+
+The first HA installation failed before execution: Supervisor rejects digest
+references in build.json and substituted its Alpine default. The earlier CI
+bypassed this by supplying BUILD_FROM directly. The Dockerfile now selects the
+same pinned Debian images through BUILD_ARCH, with no legacy build.json. CI
+uses the same arguments as Supervisor. No player or security permissions changed.
+The corrected amd64 image built successfully without a BUILD_FROM override.
+Offline launcher regression checks passed. Its installed package inventory and
+Squeezelite binary SHA256 exactly match the previously scanned 0.0.22 image.
+Clone consistency and workflow YAML checks passed. Native aarch64 CI, live HA
+installation, and audio validation remain pending for this correction.

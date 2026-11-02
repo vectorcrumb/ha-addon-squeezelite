@@ -1,3 +1,8 @@
+# 0.0.23
+
+- Select pinned Debian images directly in the Dockerfile so Supervisor builds use the correct base.
+- Test the Supervisor build path without an explicit BUILD_FROM override.
+
 # 0.0.22
 
 - Update the pinned player and Debian base; include the October 2026 parser fixes.

@@ -1,5 +1,5 @@
 name: Squeezelite Clone 2
-version: 0.0.22
+version: 0.0.23
 slug: squeezelite2
 description: Squeezelite player for Music Assistant or Lyrion through Home Assistant audio
 url: https://github.com/vectorcrumb/ha-addon-squeezelite

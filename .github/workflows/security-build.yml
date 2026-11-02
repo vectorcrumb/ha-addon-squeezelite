@@ -1,7 +1,7 @@
 name: Build and security review
 on:
   push:
-    branches: [codex/harden-pulseaudio-addon]
+    branches: [master, codex/harden-pulseaudio-addon, codex/fix-supervisor-base-image]
   pull_request:
   workflow_dispatch:
 permissions:
@@ -27,8 +27,7 @@ jobs:
       - name: Build target architecture
         shell: bash
         run: |
-          base=$(python3 -c 'import json; print(json.load(open("squeezelite/build.json"))["build_from"]["${{ matrix.arch }}"])')
-          docker build --build-arg BUILD_FROM="$base" --build-arg BUILD_ARCH=${{ matrix.arch }} --build-arg BUILD_VERSION=0.0.22 -t squeezelite:review squeezelite
+          docker build --build-arg BUILD_ARCH=${{ matrix.arch }} --build-arg BUILD_VERSION=0.0.23 -t squeezelite:review squeezelite
           docker run --rm --network none --cap-drop ALL --security-opt no-new-privileges --entrypoint /bin/sh squeezelite:review -c 'ldd /usr/local/bin/squeezelite; /usr/local/bin/squeezelite -?'
       - name: Offline launcher security tests
         env:

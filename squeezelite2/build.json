@@ -1,6 +1,0 @@
-{
-  "build_from": {
-    "aarch64": "ghcr.io/hassio-addons/debian-base@sha256:0b2ab904e977e94f39dbb5c0d3e675fb464c89717d9ce6d950e17cfb6cd29b93",
-    "amd64": "ghcr.io/hassio-addons/debian-base@sha256:6e7ef11cacd4c36c98a7f38e621b170398a79df4f77c31729cfaf2161774c094"
-  }
-}

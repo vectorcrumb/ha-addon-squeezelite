@@ -1,6 +1,8 @@
-# Home Assistant overrides BUILD_FROM with the architecture-specific build.json pin.
-ARG BUILD_FROM=ghcr.io/hassio-addons/debian-base@sha256:6e7ef11cacd4c36c98a7f38e621b170398a79df4f77c31729cfaf2161774c094
-FROM ${BUILD_FROM} AS base
+# Select digest-pinned bases directly: Supervisor build.json rejects digest references.
+ARG BUILD_ARCH=amd64
+FROM ghcr.io/hassio-addons/debian-base@sha256:6e7ef11cacd4c36c98a7f38e621b170398a79df4f77c31729cfaf2161774c094 AS base-amd64
+FROM ghcr.io/hassio-addons/debian-base@sha256:0b2ab904e977e94f39dbb5c0d3e675fb464c89717d9ce6d950e17cfb6cd29b93 AS base-aarch64
+FROM base-${BUILD_ARCH} AS base
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update \

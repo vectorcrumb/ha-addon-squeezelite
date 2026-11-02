@@ -1,110 +1,47 @@
-ARG BUILD_FROM=ghcr.io/hassio-addons/debian-base/aarch64:7.3.3
-# hadolint ignore=DL3006
+# Home Assistant overrides BUILD_FROM with the architecture-specific build.json pin.
+ARG BUILD_FROM=ghcr.io/hassio-addons/debian-base@sha256:6e7ef11cacd4c36c98a7f38e621b170398a79df4f77c31729cfaf2161774c094
 FROM ${BUILD_FROM} AS base
-
-# Set shell
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
-
-# Set correct environment variables
-ENV DEBIAN_FRONTEND="noninteractive"
-ENV LC_ALL="C.UTF-8" 
-ENV LANG="en_US.UTF-8" 
-ENV LANGUAGE="en_US.UTF-8" 
-
-# Upgrading the operating system inside the container
-RUN apt-get update && apt-get upgrade -y -o Dpkg::Options::="--force-confold" && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update \
+    && apt-get upgrade -y -o Dpkg::Options::="--force-confold" \
+    && rm -rf /var/lib/apt/lists/*
 
 FROM base AS builder
-ARG SL_COMMIT=bb7ae0615f6e661c217a1c77fdff70122859c3c5
-
-# Install Squeezelite
-RUN apt-get -qq -y update && \
-    apt-get --no-install-recommends --no-install-suggests -qq -y install \
-    alsa-utils \
-    libasound2-plugins \
-    libasound2-data \
-    portaudio19-dev \
-    libasound2-dev \
-    libvorbis-dev \
-    libmad0-dev \
-    libmpg123-dev \
-    libfaad-dev \
-    libsox-dev \
-    libsoxr-dev \
-    libavformat-dev \
-    liblirc-dev \
-    libssl-dev \
-    libopusfile-dev \
-    libflac-dev \
-    libpulse-dev \
-    faad \
-    git \
-    build-essential
-COPY squeezelite /src/
-RUN cd /src && if [ ! -r squeezelite/Makefile ]; then git clone https://github.com/ralph-irving/squeezelite && cd squeezelite && git checkout ${SL_COMMIT};fi
-COPY patches /src/patches
-RUN for i in /src/patches/*.patch;do if [ -r $i ];then patch -d / -p1 -i $i;fi ;done
-
-RUN cd /src/squeezelite && OPTS="-DVISEXPORT -DDSD" make -f Makefile.pa && mv /src/squeezelite/squeezelite-pa /src/squeezelite.pa
-RUN cd /src/squeezelite && make clean
-RUN cd /src/squeezelite && OPTS="-DVISEXPORT" make -f Makefile.pulse && mv /src/squeezelite/squeezelite-pulse /src/squeezelite.pulse
-RUN cd /src/squeezelite && make clean
-RUN cd /src/squeezelite && OPTS="-DDSD -DRESAMPLE -DVISEXPORT" make -f Makefile
-#RUN cd /tmp && git clone https://github.com/ralph-irving/squeezelite && cd squeezelite && make -f Makefile OPTS="-DDSD"
-#RUN if [ -x /tmp//tmp/squeezelite/squeezelite-pa ];then mv /tmp/squeezelite/squeezelite-pa /tmp/squeezelite/squeezelite;fi
-#  -DOPUS -DALAC -DRESAMPLE -DVISEXPORT -DDSD -DIR -DGPIO -DRPI -DUSE_SSL -DLINKALL -I./include -I./include/opus -I./include/alac 
+# Includes the October 2026 Ogg bounds and malformed-MP4 fixes.
+ARG SL_COMMIT=cc7ee7c0d00bd2aa691a574a7d429d5cd13c858b
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        build-essential ca-certificates git libpulse-dev libflac-dev \
+        libvorbis-dev libmpg123-dev libfaad-dev libopusfile-dev libssl-dev \
+    && rm -rf /var/lib/apt/lists/*
+RUN git init /src \
+    && git -C /src remote add origin https://github.com/ralph-irving/squeezelite.git \
+    && git -C /src fetch --depth 1 origin "${SL_COMMIT}" \
+    && git -C /src checkout --detach FETCH_HEAD \
+    && test "$(git -C /src rev-parse HEAD)" = "${SL_COMMIT}"
+RUN make -C /src -f Makefile.pulse \
+        OPTS="-DPULSEAUDIO -DLINKALL -DUSE_SSL -DOPUS -DNO_MAD" \
+        CFLAGS="-Wall -fPIC -O2 -fcommon -std=gnu99 -fstack-protector-strong -D_FORTIFY_SOURCE=2" \
+        CPPFLAGS="-I/usr/include/opus" \
+        LDFLAGS="-Wl,-z,relro,-z,now,-z,noexecstack" \
+    && strip /src/squeezelite-pulse
 
 FROM base
-
-ARG BUILD_ARCH
-ARG BUILD_DATE
-ARG BUILD_REF
-ARG BUILD_VERSION
-
-RUN apt-get -qq -y update && \
-    apt-get --no-install-recommends --no-install-suggests -qq -y install \
-    openssl \
-    alsa-utils \
-    libasound2-plugins \
-    libasound2-plugin-equal \
-    libasound2-data \
-    libportaudio2 \
-    libasound2 \
-    libvorbis0a \
-    libmad0 \
-    libmpg123-0 \
-    libfaad2 \
-    libsox3 \
-    libsoxr0 \
-    libavformat59 \
-    liblirc-client0 \
-    libssl3 \
-    libopusfile0 \
-    libflac12 && \
-    apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* /var/run/*
-
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        ca-certificates libpulse0 libflac14 libvorbisfile3 libmpg123-0t64 \
+        libfaad2 libopusfile0 libssl3t64 \
+    && rm -rf /var/lib/apt/lists/*
+# The inherited template renderer is unused and carries separately bundled Go dependencies.
+RUN rm -f /usr/bin/tempio
+COPY --from=builder /src/squeezelite-pulse /usr/local/bin/squeezelite
 COPY rootfs /
-COPY --from=builder /src/squeezelite/squeezelite /usr/local/bin/squeezelite.alsa
-COPY --from=builder /src/squeezelite.pulse /usr/local/bin/squeezelite.pulse
-COPY --from=builder /src/squeezelite.pa /usr/local/bin/squeezelite.pa
-
-# Labels
-LABEL \
-    io.hass.name="Squeezelite Player" \
-    io.hass.description="Squeezelite HA Addon player" \
-    io.hass.arch="${BUILD_ARCH}" \
-    io.hass.type="addon" \
-    io.hass.version=${BUILD_VERSION} \
-    maintainer="Phillip Camp <phillip.camp+ha@gmail.com>" \
-    org.opencontainers.image.title="Squeezelite" \
-    org.opencontainers.image.description="Squeezelite HA Addon player" \
-    org.opencontainers.image.vendor="pssc" \
-    org.opencontainers.image.authors="Phillip, Adrian & Ralph" \
-    org.opencontainers.image.licenses="Multiple" \
-    org.opencontainers.image.url="https://github.com/pssc/ha-addon-lms/" \
-    org.opencontainers.image.source="https://github.com/pssc/ha-addon-squeezelite/squeezelite/" \
-    org.opencontainers.image.documentation="https://github.com/pssc/ha-addon-squeezelite/blob/master/squeezelite/DOCS.md" \
-    org.opencontainers.image.created=${BUILD_DATE} \
-    org.opencontainers.image.revision=${BUILD_REF} \
-    org.opencontainers.image.version=${BUILD_VERSION}
-
+ARG BUILD_ARCH
+ARG BUILD_VERSION
+LABEL io.hass.name="Squeezelite" \
+      io.hass.type="addon" \
+      io.hass.arch="${BUILD_ARCH}" \
+      io.hass.version="${BUILD_VERSION}" \
+      org.opencontainers.image.source="https://github.com/vectorcrumb/ha-addon-squeezelite" \
+      org.opencontainers.image.licenses="GPL-3.0-or-later"

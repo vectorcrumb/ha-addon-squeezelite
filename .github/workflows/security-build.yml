@@ -1,0 +1,49 @@
+name: Build and security review
+on:
+  push:
+    branches: [codex/harden-pulseaudio-addon]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            arch: amd64
+            scanner_digest: sha256:2e6c00d711ab4ae41d8a30c2c1fd3bd3b62704c177bb120f95012e939edfb3df
+          - runner: ubuntu-24.04-arm
+            arch: aarch64
+            scanner_digest: sha256:fc223b6f033406fd0c5efe59b566295e90cff76ccd2af696bd0d66d53ad83a2d
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Build target architecture
+        shell: bash
+        run: |
+          base=$(python3 -c 'import json; print(json.load(open("squeezelite/build.json"))["build_from"]["${{ matrix.arch }}"])')
+          docker build --build-arg BUILD_FROM="$base" --build-arg BUILD_ARCH=${{ matrix.arch }} --build-arg BUILD_VERSION=0.0.22 -t squeezelite:review squeezelite
+          docker run --rm --network none --cap-drop ALL --security-opt no-new-privileges --entrypoint /bin/sh squeezelite:review -c 'ldd /usr/local/bin/squeezelite; /usr/local/bin/squeezelite -?'
+      - name: Offline launcher security tests
+        env:
+          CONTAINER_ENGINE: docker
+        run: python3 tests/runtime.py squeezelite:review
+      - name: Scan image without hiding unfixed findings
+        run: |
+          mkdir -p scan
+          docker save -o scan/image.tar squeezelite:review
+          docker run --rm -v "$PWD/scan:/scan" aquasec/trivy@${{ matrix.scanner_digest }} image --scanners vuln --format json --output /scan/trivy.json --input /scan/image.tar
+          python3 tests/scan_gate.py scan/trivy.json
+      - name: Retain complete scan report
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: security-scan-${{ matrix.arch }}
+          path: scan/trivy.json
+          if-no-files-found: warn

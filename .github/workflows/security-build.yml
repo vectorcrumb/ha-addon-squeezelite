@@ -14,8 +14,10 @@ jobs:
         include:
           - runner: ubuntu-24.04
             arch: amd64
+            scanner_digest: sha256:2e6c00d711ab4ae41d8a30c2c1fd3bd3b62704c177bb120f95012e939edfb3df
           - runner: ubuntu-24.04-arm
             arch: aarch64
+            scanner_digest: sha256:fc223b6f033406fd0c5efe59b566295e90cff76ccd2af696bd0d66d53ad83a2d
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 25
     steps:
@@ -36,7 +38,7 @@ jobs:
         run: |
           mkdir -p scan
           docker save -o scan/image.tar squeezelite:review
-          docker run --rm -v "$PWD/scan:/scan" aquasec/trivy@sha256:2e6c00d711ab4ae41d8a30c2c1fd3bd3b62704c177bb120f95012e939edfb3df image --scanners vuln --format json --output /scan/trivy.json --input /scan/image.tar
+          docker run --rm -v "$PWD/scan:/scan" aquasec/trivy@${{ matrix.scanner_digest }} image --scanners vuln --format json --output /scan/trivy.json --input /scan/image.tar
           python3 tests/scan_gate.py scan/trivy.json
       - name: Retain complete scan report
         if: always()

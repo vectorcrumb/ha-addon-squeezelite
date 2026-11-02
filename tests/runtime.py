@@ -9,6 +9,11 @@ import tempfile
 
 image = sys.argv[1] if len(sys.argv) > 1 else "localhost/squeezelite-security-review:0.0.22"
 engine = os.environ.get("CONTAINER_ENGINE", "podman")
+# Give the container the fixture owner's UID. Rootless Podman needs keep-id;
+# Docker's root without CAP_DAC_OVERRIDE cannot write a runner-owned directory.
+identity_flags = ["--user", f"{os.getuid()}:{os.getgid()}"]
+if Path(engine).name == "podman":
+    identity_flags += ["--userns", "keep-id"]
 
 
 def launch(options, expect_success=True):
@@ -23,6 +28,7 @@ def launch(options, expect_success=True):
         result = subprocess.run(
             [engine, "run", "--rm", "--network", "none", "--cap-drop", "all",
              "--security-opt", "no-new-privileges", "--read-only", "--tmpfs", "/tmp",
+             *identity_flags,
              "-v", f"{data}:/data:Z",
              "-v", f"{binary}:/usr/local/bin/squeezelite:ro,Z",
              "--entrypoint", "/bin/bash", image,

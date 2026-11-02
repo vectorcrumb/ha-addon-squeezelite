@@ -9,8 +9,9 @@ performed during this work.
 
 The hardened amd64 image builds, its linked libraries resolve, and its launcher
 passes offline input-handling and identity-persistence checks. This is a
-review candidate, not deployment approval: native aarch64 and live HAOS
-PulseAudio/AppArmor/network tests are required before switching the speakers.
+review candidate, not deployment approval. Native amd64 and aarch64 builds,
+launcher tests and vulnerability gates passed in CI. Live HAOS
+PulseAudio/AppArmor/network tests are still required before switching speakers.
 
 ## Corrections
 
@@ -42,12 +43,17 @@ PulseAudio/AppArmor/network tests are required before switching the speakers.
   capabilities and no-new-privileges. Tests cover literal percent/shell
   metacharacters, invalid server/MAC rejection, and generated MAC persistence.
 - Tests substitute an argument-capture binary; they do not prove actual audio.
-- CI builds and scans both supported architectures on native GitHub runners.
+- Native amd64 and aarch64 CI builds, offline launcher tests and scan gates passed:
+  https://github.com/vectorcrumb/ha-addon-squeezelite/actions/runs/41487141072
+  (tested code revision c60552d).
 
 ## Vulnerability scan
 
 Trivy 0.76.1, official scanner image digest:
 `sha256:2e6c00d711ab4ae41d8a30c2c1fd3bd3b62704c177bb120f95012e939edfb3df`.
+
+The native ARM CI job uses scanner digest
+`sha256:fc223b6f033406fd0c5efe59b566295e90cff76ccd2af696bd0d66d53ad83a2d`.
 
 Final local image ID:
 `9cbdc62bd2c57914a033811d2441a11da1a556125f5ca4c89b49ae56a1d9ecdb`.
@@ -95,8 +101,8 @@ approval to deploy.
 
 ## Remaining limits
 
-The host has no ARM emulation registered. aarch64 validation must run in the
-native ARM CI job. HAOS default AppArmor, the PulseAudio socket/output selector,
+The local host has no ARM emulation registered; the native ARM CI job supplied
+the aarch64 validation. HAOS default AppArmor, the PulseAudio socket/output selector,
 and container-network access to MA require a separate staged trial.
 
 Upstream optional TLS support does not configure certificate verification;

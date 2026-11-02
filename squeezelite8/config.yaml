@@ -1,39 +1,23 @@
 name: Squeezelite Clone 8
-version: 0.0.21
+version: 0.0.22
 slug: squeezelite8
-description: Squeezelite player for LMS the Lyrion Music Server, formerly the Logitech Media Server on home assistant
-url: https://github.com/pssc/ha-addon-squeezelite
+description: Squeezelite player for Music Assistant or Lyrion through Home Assistant audio
+url: https://github.com/vectorcrumb/ha-addon-squeezelite
 startup: services
 arch:
   - aarch64
-  - armhf
-  - armv7
   - amd64
-  - i386
-map:
-  - config:rw
-boot: auto
+boot: manual
 init: false
-hassio_api: true
-hassio_role: default
-apparmor: false
-privileged:
-  - SYS_PTRACE
-  - SYS_ADMIN
-  - SYS_NICE
-  - IPC_LOCK
-host_network: true
-udev: true
+apparmor: true
 audio: true
-full_access: true
 stage: experimental
-options: {}
+options:
+  name: Squeezelite
+  server: ""
+  log_level: info
 schema:
-  log_level: list(error|warning|notice|info|debug|trace)?
-  build: list(pa|alsa|pulse)?
-  server: str?
-  output: str?
-  name: str?
-  nice: int?
-  options: str?
-  clientmac: str?
+  name: str
+  server: str
+  log_level: list(error|warning|notice|info|debug|trace)
+  clientmac: match(^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$)?

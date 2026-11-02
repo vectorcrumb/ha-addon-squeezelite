@@ -1,5 +1,5 @@
 {
-  "name": "Squeezelite for Logitech Media Server Addon for Home Assistant",
-  "url": "http://github.com/pssc/ha-addon-squeezelite/",
-  "maintainer": "Phillip Camp"
+  "name": "Squeezelite for Home Assistant audio",
+  "url": "https://github.com/vectorcrumb/ha-addon-squeezelite",
+  "maintainer": "vectorcrumb"
 }

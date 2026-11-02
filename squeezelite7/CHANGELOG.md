@@ -1,3 +1,10 @@
+# 0.0.22
+
+- Update the pinned player and Debian base; include the October 2026 parser fixes.
+- Restrict playback to HA PulseAudio, with AppArmor and no privileged access.
+- Require an explicit server and remove unsafe/unsupported legacy options.
+- See DOCS.md for migration and supported architectures.
+
 ## [0.0.21] 2025-05-24
 ### Changes
  - debian base to 7.8.3
